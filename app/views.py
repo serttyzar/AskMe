@@ -1,161 +1,82 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.shortcuts import render, get_object_or_404, redirect
+from django.core.paginator import Paginator
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from app.models import Profile, Tag, Question, Answer
 
-def paginate(objects_list, request, per_page=10):
-    paginator = Paginator(objects_list, per_page)
+# Пагинация
+def paginate_queryset(request, queryset, per_page=10):
+    paginator = Paginator(queryset, per_page)
     page = request.GET.get('page')
-    try:
-        page_obj = paginator.page(page)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
-    return page_obj
+    return paginator.get_page(page)
 
-def get_popular_tags():
-    return [
-        {'name': 'python'},
-        {'name': 'django'},
-        {'name': 'javascript'},
-        {'name': 'html'},
-        {'name': 'css'},
-        {'name': 'bootstrap'},
-        {'name': 'jquery'},
-        {'name': 'react'},
-        {'name': 'vue'},
-        {'name': 'angular'},
-    ]
+def get_common_context():
+    popular_tags = Tag.objects.popular_tags()
+    best_members = Profile.objects.best_members()
+    return {'popular_tags': popular_tags, 'best_members': best_members}
 
-def get_best_members():
-    return [
-        {'username': 'Mr.Freeman'},
-        {'username': 'Dr.House'},
-        {'username': 'Bender'},
-        {'username': 'Queen Victoria'},
-        {'username': 'V.Pupkin'},
-    ]
 
 # Главная страница - список новых вопросов
 def index(request):
-    questions = []
-    for i in range(1, 30):
-        questions.append({
-            'title': 'Title ' + str(i),
-            'id': i,
-            'text': 'text' + str(i)
-        })
-    popular_tags = get_popular_tags()
-    best_members = get_best_members()
-
-    questions = paginate(questions, request)
-    context = {
-        'questions': questions,
-        'popular_tags': popular_tags,
-        'best_members': best_members,
-    }
-    return render(request, 'index.html', context)
+    questions = paginate_queryset(request, Question.objects.new_questions())
+    return render(request, 'index.html', {'questions': questions, **get_common_context()})
 
 # Список "лучших" вопросов
 def hot(request):
-    questions = []
-    for i in range(1, 30):
-        questions.append({
-            'title': 'Title ' + str(i),
-            'id': i,
-            'text': 'text' + str(i)
-        })
-    popular_tags = get_popular_tags()
-    best_members = get_best_members()
-
-    questions = paginate(questions, request)
-    context = {
-        'questions': questions,
-        'popular_tags': popular_tags,
-        'best_members': best_members,
-    }
-    return render(request, 'hot.html', context)
+    questions = paginate_queryset(request, Question.objects.best_questions())
+    return render(request, 'hot.html', {'questions': questions, **get_common_context()})
 
 # Вопросы по тегу
 def tag(request, tag_name):
-    questions = []
-    for i in range(1, 10):
-        questions.append({
-            'title': f'Tagged {tag_name} Question ' + str(i),
-            'id': i,
-            'text': f'Text of question tagged {tag_name} ' + str(i)
-        })
-    questions = paginate(questions, request)
-    context = {
-        'questions': questions,
-        'tag_name': tag_name,
-    }
-    return render(request, 'tag.html', context)
+    tag = get_object_or_404(Tag, name=tag_name)
+    questions = paginate_queryset(request, tag.questions.all())
+    return render(request, 'tag.html', {'questions': questions, 'tag_name': tag_name, **get_common_context()})
 
 # Страница одного вопроса со списком ответов
 def question(request, question_id):
-    questions = []
-    for i in range(1, 30):
-        questions.append({
-            'title': 'Title ' + str(i),
-            'id': i,
-            'text': 'text' + str(i)
-        })
-    question = next((q for q in questions if q['id'] == question_id), None)
-    
-    if not question:
-        return render(request, '404.html', status=404)
+    question = get_object_or_404(Question, id=question_id)
+    answers = paginate_queryset(request, question.answers.all())
+    return render(request, 'question.html', {'question': question, 'answers': answers, **get_common_context()})
 
-    popular_tags = get_popular_tags()
-    best_members = get_best_members()
+# Лайк на вопрос
+@require_POST
+@login_required
+def like_question(request, question_id):
+    question = get_object_or_404(Question, id=question_id)
+    question.toggle_like(request.user)
+    return redirect('question', question_id=question_id)
 
-    context = {
-        'question': question,
-        'popular_tags': popular_tags,
-        'best_members': best_members,
-    }
-    return render(request, 'question.html', context)
+# Лайк на ответ
+@require_POST
+@login_required
+def like_answer(request, answer_id):
+    answer = get_object_or_404(Answer, id=answer_id)
+    answer.toggle_like(request.user)
+    return redirect('question', question_id=answer.question.id)
+
 
 # Форма логина
 def login_view(request):
-    popular_tags = get_popular_tags()
-    best_members = get_best_members()
-
-    context = {
-        'popular_tags': popular_tags,
-        'best_members': best_members,
-    }
+    context = get_common_context()
     return render(request, 'login.html', context)
 
 # Форма регистрации
 def signup(request):
-    popular_tags = get_popular_tags()
-    best_members = get_best_members()
-
-    context = {
-        'popular_tags': popular_tags,
-        'best_members': best_members,
-    }
+    context = get_common_context()
     return render(request, 'signup.html', context)
 
 # Форма создания вопроса
+@login_required
 def ask(request):
-    popular_tags = get_popular_tags()
-    best_members = get_best_members()
-
-    context = {
-        'popular_tags': popular_tags,
-        'best_members': best_members,
-    }
+    context = get_common_context()
     return render(request, 'ask.html', context)
 
 # Настройки пользователя
+@login_required
 def settings(request):
-    # Вы можете передать сюда данные для текущего пользователя
-    user = request.user
     context = {
-        'username': user.username,
-        'email': user.email,
-        # 'avatar': user.avatar или другие данные
+        'username': request.user.username,
+        'email': request.user.email,
+        **get_common_context(),
     }
-    return render(request, 'settings.html', context)
+    return render(request, 'settings.html', context)    

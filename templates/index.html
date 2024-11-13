@@ -16,10 +16,34 @@
             <div class="col-md-10">
                 <div class="card-body">
                     <h5 class="card-title">
-                        <a href="{% url 'question' question.id %}">{{ question.title }}</a>
+                        {{ question.title }}
                     </h5>
                     <p class="card-text">{{ question.text }}</p>
-                    <a href="{% url 'question' question.id %}" class="btn btn-primary">View Question</a>
+
+                    <p class="card-text">
+                        <strong>Tags:</strong>
+                        {% for tag in question.tags.all %}
+                            <a href="{% url 'tag' tag.name %}" class="badge badge-info">{{ tag.name }}</a>
+                        {% empty %}
+                            <span>No tags</span>
+                        {% endfor %}
+                    </p>
+                    <!-- Блок с кнопками -->
+                    <div class="d-flex align-items-center">
+                        <!-- Блок лайка с рамкой -->
+                        <form action="{% url 'like_question' question.id %}" method="post" class="d-flex align-items-center mr-3">
+                            {% csrf_token %}
+                            <div class="like-box d-flex align-items-center px-2 py-1 border rounded">
+                                <button type="submit" class="btn btn-outline-primary btn-sm d-flex align-items-center">
+                                    👍
+                                </button>
+                                <span class="ml-2">{{ question.likes_count }}</span>
+                            </div>
+                        </form>
+
+                        <!-- Кнопка для просмотра вопроса -->
+                        <a href="{% url 'question' question.id %}" class="btn btn-primary">View Question</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -27,6 +51,8 @@
 {% empty %}
     <p>No questions yet!</p>
 {% endfor %}
+
+
 
 <!-- Пагинация -->
 <nav>

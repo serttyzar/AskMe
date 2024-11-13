@@ -11,5 +11,8 @@ urlpatterns = [
     path('signup/', views.signup, name='signup'),  # Форма регистрации
     path('ask/', views.ask, name='ask'),  # Форма создания вопроса
     path('settings/', views.settings, name='settings'),
+    path('question/<int:question_id>/like/', views.like_question, name='like_question'),
+    path('questions/<int:question_id>/like/', views.like_question, name='like_question'),
+    path('answers/<int:answer_id>/like/', views.like_answer, name='like_answer'),
 ]
 

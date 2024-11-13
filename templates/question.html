@@ -14,10 +14,21 @@
                 <p class="card-text">{{ question.text }}</p>
                 <p class="card-text">
                     <small class="text-muted">Tags: 
-                        {% for tag in question.tags %}
-                            <a href="{% url 'tag' tag %}" class="badge badge-pill badge-secondary">{{ tag }}</a>
+                        {% for tag in question.tags.all %}
+                            <a href="{% url 'tag' tag.name %}" class="badge badge-info">{{ tag.name }}</a>
+                        {% empty %}
+                            <span>No tags</span>
                         {% endfor %}
                     </small>
+                    <form action="{% url 'like_question' question.id %}" method="post" class="d-flex align-items-center mr-3">
+                        {% csrf_token %}
+                        <div class="like-box d-flex align-items-center px-2 py-1 border rounded">
+                            <button type="submit" class="btn btn-outline-primary btn-sm d-flex align-items-center">
+                                👍
+                            </button>
+                            <span class="ml-2">{{ question.likes_count }}</span>
+                        </div>
+                    </form>
                 </p>
             </div>
         </div>
@@ -25,7 +36,7 @@
 </div>
 
 <h4>Answers:</h4>
-{% for answer in question.answers %}
+{% for answer in answers %}
     <div class="card mb-3">
         <div class="row no-gutters">
             <div class="col-md-2">
@@ -34,16 +45,24 @@
             <div class="col-md-10">
                 <div class="card-body">
                     <p class="card-text">{{ answer.text }}</p>
-                    <p class="card-text">
-                        <small class="text-muted">
-                            <span class="badge badge-success">{{ answer.votes }} Correct!</span>
-                        </small>
-                    </p>
+
+                    <!-- Форма для лайка ответа -->
+                    <form action="{% url 'like_answer' answer.id %}" method="post" class="d-flex align-items-center mr-3">
+                        {% csrf_token %}
+                        <div class="like-box d-flex align-items-center px-2 py-1 border rounded">
+                            <button type="submit" class="btn btn-outline-primary btn-sm d-flex align-items-center">
+                                👍
+                            </button>
+                            <span class="ml-2">{{ answer.likes.count }}</span>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 {% endfor %}
+
+
 
 <h4>Enter your answer here..</h4>
 <form>
